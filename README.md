@@ -70,7 +70,7 @@ Import a Hardhat test account into MetaMask and add the network `http://127.0.0.
 
 ### Hosting on Vercel
 
-Set **Root Directory** to `web`. Then add these under **Settings → Environment Variables**: `VITE_CHAIN`, `VITE_RPC_URL`, `VITE_LAUNCHPAD_ADDRESS`, `VITE_LAUNCHPAD_FROM_BLOCK` and optionally `VITE_EXPLORER_URL`. Vite bakes these into the build, so **redeploy after changing them**. `web/vercel.json` makes page refreshes on routes like `/token/0x…` work. The RPC URL ends up in the public bundle. If it carries an API key, restrict that key to your domain in the provider's dashboard.
+Set **Root Directory** to `web`. Then add these under **Settings → Environment Variables**: `VITE_CHAIN`, `VITE_LAUNCHPAD_ADDRESS` and `VITE_LAUNCHPAD_FROM_BLOCK`. `VITE_RPC_URL` and `VITE_EXPLORER_URL` are optional. On testnet the RPC defaults to the official public endpoint `https://rpc.testnet.chain.robinhood.com`, which is rate-limited. Until the launchpad address is set, visitors see a "Launching soon" banner. Vite bakes these into the build, so **redeploy after changing them**. `web/vercel.json` makes page refreshes on routes like `/token/0x…` work. The RPC URL ends up in the public bundle. If it carries an API key, restrict that key to your domain in the provider's dashboard.
 
 If no DEX is configured, a curve still completes when it sells out but waits. Once the owner calls `setDex(factory, weth)`, anyone can press **Migrate liquidity to DEX** on the token page (or call `migrate(token)`).
 

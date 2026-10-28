@@ -6,7 +6,7 @@ import TokenAvatar from "../components/TokenAvatar";
 import { launchpadAbi } from "../abi/Launchpad";
 import { launchpad, useParams } from "../hooks/useLaunchpad";
 import { useTx } from "../hooks/useTx";
-import { chain } from "../config";
+import { chain, isConfigured } from "../config";
 import { fmtEth, safeImage } from "../lib/format";
 import { AGENT_TYPES, encodeAgentDescription, type AgentType } from "../lib/agent";
 
@@ -128,8 +128,10 @@ export default function Create() {
         </p>
         {formError && <p className="error small">{formError}</p>}
         {tx.error && <p className="error small">{tx.error}</p>}
-        <button className="btn btn-primary btn-block" disabled={!address || wrongChain || tx.isBusy}>
-          {!address ? "Connect wallet first" : wrongChain ? `Switch to ${chain.name}` : tx.isBusy ? "Deploying…" : "Deploy agent"}
+        <button className="btn btn-primary btn-block" disabled={!isConfigured || !address || wrongChain || tx.isBusy}>
+          {!isConfigured
+            ? "Launching soon"
+            : !address ? "Connect wallet first" : wrongChain ? `Switch to ${chain.name}` : tx.isBusy ? "Deploying…" : "Deploy agent"}
         </button>
       </form>
     </div>

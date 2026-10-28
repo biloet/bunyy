@@ -9,7 +9,8 @@ const presets = {
   testnet: {
     id: 46630,
     name: "Robinhood Chain Testnet",
-    rpc: "",
+    // Official public endpoint: rate-limited, fine to start with. Set VITE_RPC_URL for production traffic.
+    rpc: "https://rpc.testnet.chain.robinhood.com",
     explorer: "https://explorer.testnet.chain.robinhood.com",
     testnet: true,
   },

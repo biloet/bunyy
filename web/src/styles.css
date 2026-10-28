@@ -54,6 +54,14 @@ main.container { padding-bottom: 64px; }
 .accent { color: var(--accent); }
 .error { color: var(--danger); overflow-wrap: anywhere; }
 .success { color: var(--accent); }
+.launch-banner {
+  margin: 20px 0 0; display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px;
+  border-radius: var(--radius-sm); border: 1px solid rgba(56, 225, 255, 0.35);
+  background: linear-gradient(135deg, rgba(56, 225, 255, 0.1), rgba(139, 92, 246, 0.12));
+}
+.launch-banner strong { display: block; margin-bottom: 2px; }
+.launch-banner-dot { flex-shrink: 0; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(56, 225, 255, 0.18), 0 0 12px var(--accent); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.45; } }
 .notice { margin: 20px 0 0; padding: 14px 16px; border: 1px solid var(--warn); background: var(--warn-soft); border-radius: var(--radius-sm); color: var(--warn); }
 
 /* ---------- Header ---------- */

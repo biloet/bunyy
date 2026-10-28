@@ -6,14 +6,25 @@ import TokenPage from "./pages/TokenPage";
 import Positions from "./pages/Positions";
 import Transactions from "./pages/Transactions";
 import Rules from "./pages/Rules";
-import { isConfigured, missingEnv } from "./config";
+import { chain, isConfigured, missingEnv } from "./config";
 
 export default function App() {
   return (
     <>
       <Header />
       <main className="container">
-        {!isConfigured && (
+        {!isConfigured && !import.meta.env.DEV && (
+          <div className="launch-banner">
+            <span className="launch-banner-dot" />
+            <div>
+              <strong>Launching soon on {chain.name}</strong>
+              <p className="muted small">
+                The bunyy launchpad is being deployed. Deploying agents and trading open as soon as it goes live.
+              </p>
+            </div>
+          </div>
+        )}
+        {!isConfigured && import.meta.env.DEV && (
           <div className="notice">
             The app is not configured yet. Missing:{" "}
             {missingEnv.map((k, i) => (
