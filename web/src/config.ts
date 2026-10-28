@@ -43,7 +43,11 @@ export const chain = defineChain({
 
 export const LAUNCHPAD_ADDRESS = (env.VITE_LAUNCHPAD_ADDRESS || "") as Address | "";
 export const FROM_BLOCK = BigInt(env.VITE_LAUNCHPAD_FROM_BLOCK || "0");
-export const isConfigured = Boolean(rpcUrl && LAUNCHPAD_ADDRESS);
+export const missingEnv = [
+  !rpcUrl && "VITE_RPC_URL",
+  !LAUNCHPAD_ADDRESS && "VITE_LAUNCHPAD_ADDRESS",
+].filter(Boolean) as string[];
+export const isConfigured = missingEnv.length === 0;
 
 export const wagmiConfig = createConfig({
   chains: [chain],

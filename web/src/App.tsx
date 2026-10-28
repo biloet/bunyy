@@ -6,7 +6,7 @@ import TokenPage from "./pages/TokenPage";
 import Positions from "./pages/Positions";
 import Transactions from "./pages/Transactions";
 import Rules from "./pages/Rules";
-import { isConfigured } from "./config";
+import { isConfigured, missingEnv } from "./config";
 
 export default function App() {
   return (
@@ -15,8 +15,15 @@ export default function App() {
       <main className="container">
         {!isConfigured && (
           <div className="notice">
-            The app is not configured yet. Copy <code>web/.env.example</code> to <code>web/.env</code> and set{" "}
-            <code>VITE_RPC_URL</code> and <code>VITE_LAUNCHPAD_ADDRESS</code>.
+            The app is not configured yet. Missing:{" "}
+            {missingEnv.map((k, i) => (
+              <span key={k}>
+                {i > 0 && ", "}
+                <code>{k}</code>
+              </span>
+            ))}
+            . Set them as environment variables on your host (e.g. Vercel → Settings → Environment Variables) or in{" "}
+            <code>web/.env</code>, then rebuild/redeploy.
           </div>
         )}
         <Routes>
