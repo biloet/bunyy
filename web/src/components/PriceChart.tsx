@@ -1,30 +1,143 @@
-import type { TradeLog } from "../hooks/useLaunchpad";
+import { useMemo, useState } from "react";
 
-/** Minimal SVG line chart of the curve price after each trade. */
-export default function PriceChart({ trades, startPrice }: { trades: TradeLog[]; startPrice: number }) {
-  const points = [startPrice, ...trades.map((t) => Number(t.virtualEth) / Number(t.virtualToken))];
-  if (points.length < 2) {
-    return <div className="chart chart-empty muted">No trades yet — be the first to buy.</div>;
-  }
-  const w = 600;
-  const h = 220;
-  const pad = 8;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const span = max - min || max || 1;
-  const xy = points.map((p, i) => {
-    const x = pad + (i / (points.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((p - min) / span) * (h - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const up = points[points.length - 1] >= points[0];
+export type Point = { t: number; v: number };
+
+const RANGES = [
+  { key: "1H", seconds: 3600 },
+  { key: "1D", seconds: 86_400 },
+  { key: "1W", seconds: 604_800 },
+  { key: "All", seconds: Infinity },
+] as const;
+
+const W = 600;
+const H = 240;
+const TICKS = 5;
+
+function clock(t: number) {
+  return new Date(t * 1000).toISOString().slice(11, 19);
+}
+
+function tickLabel(v: number, span: number) {
+  if (v === 0) return "0";
+  if (Math.abs(v) < 0.001) return v.toExponential(2);
+  const digits = Math.min(8, Math.max(1, Math.ceil(-Math.log10(span || Math.abs(v))) + 2));
+  return v.toFixed(digits);
+}
+
+/**
+ * Line chart card body: range selector, y-axis labels, grid, area fill and a
+ * marker on the latest point. `points` must be sorted by time.
+ */
+export default function PriceChart({
+  points,
+  onRefresh,
+  emptyText = "No trades yet.",
+}: {
+  points: Point[];
+  onRefresh?: () => void;
+  emptyText?: string;
+}) {
+  const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("All");
+
+  const shown = useMemo(() => {
+    const seconds = RANGES.find((r) => r.key === range)!.seconds;
+    if (!isFinite(seconds) || points.length === 0) return points;
+    const from = Math.floor(Date.now() / 1000) - seconds;
+    const inside = points.filter((p) => p.t >= from);
+    const before = points.filter((p) => p.t < from).pop();
+    // Carry the last value before the window in, so the line starts at the window edge.
+    return before ? [{ t: from, v: before.v }, ...inside] : inside;
+  }, [points, range]);
+
+  const last = points[points.length - 1];
+
   return (
-    <svg className="chart" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label="Price chart">
-      <polyline
-        points={`${pad},${h - pad} ${xy.join(" ")} ${w - pad},${h - pad}`}
-        className={up ? "chart-area up" : "chart-area down"}
-      />
-      <polyline points={xy.join(" ")} className={up ? "chart-line up" : "chart-line down"} />
-    </svg>
+    <div className="chart-block">
+      <div className="chart-toolbar">
+        <button className="link-btn" onClick={onRefresh} type="button">
+          Refresh chart
+        </button>
+        <div className="segmented" role="tablist">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              role="tab"
+              aria-selected={range === r.key}
+              className={range === r.key ? "seg active" : "seg"}
+              onClick={() => setRange(r.key)}
+            >
+              {r.key}
+            </button>
+          ))}
+        </div>
+      </div>
+      {shown.length < 2 ? (
+        <div className="chart-empty muted">{emptyText}</div>
+      ) : (
+        <Plot points={shown} lastTime={last?.t} />
+      )}
+    </div>
+  );
+}
+
+function Plot({ points, lastTime }: { points: Point[]; lastTime?: number }) {
+  const vals = points.map((p) => p.v);
+  let min = Math.min(...vals);
+  let max = Math.max(...vals);
+  if (max === min) {
+    const pad = max === 0 ? 1 : Math.abs(max) * 0.05;
+    min = min >= 0 ? Math.max(0, min - pad) : min - pad;
+    max += pad;
+  } else {
+    const pad = (max - min) * 0.08;
+    // Prices and volumes are never negative, so don't pad the axis below zero.
+    min = min >= 0 ? Math.max(0, min - pad) : min - pad;
+    max += pad;
+  }
+  const span = max - min;
+  const t0 = points[0].t;
+  const t1 = points[points.length - 1].t;
+  const tSpan = t1 - t0 || 1;
+
+  const xy = points.map((p, i) => {
+    const x = t1 === t0 ? (i / (points.length - 1)) * W : ((p.t - t0) / tSpan) * W;
+    const y = H - ((p.v - min) / span) * H;
+    return [x, y] as const;
+  });
+  const line = xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const ticks = Array.from({ length: TICKS }, (_, i) => max - (span * i) / (TICKS - 1));
+  const [ex, ey] = xy[xy.length - 1];
+
+  return (
+    <div className="plot">
+      <div className="plot-y">
+        {ticks.map((v, i) => (
+          <span key={i}>{tickLabel(v, span)}</span>
+        ))}
+      </div>
+      <div className="plot-area">
+        {lastTime !== undefined && <div className="plot-pill">Last trade · {clock(lastTime).slice(0, 5)} UTC</div>}
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Price chart">
+          <defs>
+            <linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {ticks.map((_, i) => {
+            const y = (H * i) / (TICKS - 1);
+            return <line key={i} x1="0" x2={W} y1={y} y2={y} className="grid-line" />;
+          })}
+          <polygon points={`0,${H} ${line} ${W},${H}`} fill="url(#chart-fill)" />
+          <polyline points={line} className="plot-line" />
+        </svg>
+        <span className="plot-dot" style={{ left: `${(ex / W) * 100}%`, top: `${(ey / H) * 100}%` }} />
+      </div>
+      <div className="plot-x">
+        <span>{clock(points[0].t)}</span>
+        <span>{clock(points[points.length - 1].t)} UTC</span>
+      </div>
+    </div>
   );
 }

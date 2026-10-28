@@ -104,6 +104,7 @@ function useTokenDetails(addresses: readonly Address[], params: ParamsTuple | un
 const tradeEvent = getAbiItem({ abi: launchpadAbi, name: "Trade" });
 
 export type TradeLog = {
+  token: Address;
   trader: Address;
   isBuy: boolean;
   ethAmount: bigint;
@@ -114,21 +115,23 @@ export type TradeLog = {
   txHash: `0x${string}`;
 };
 
-export function useTrades(token: Address) {
+/** Trade events for one token, or for the whole launchpad when `token` is omitted. Oldest first. */
+export function useTrades(token?: Address) {
   const client = usePublicClient();
   return useQuery({
-    queryKey: ["trades", token],
+    queryKey: ["trades", token ?? "all"],
     enabled: enabled && Boolean(client),
     refetchInterval: 8_000,
     queryFn: async (): Promise<TradeLog[]> => {
       const logs = await client!.getLogs({
         address: LAUNCHPAD_ADDRESS as Address,
         event: tradeEvent,
-        args: { token },
+        args: token ? { token } : undefined,
         fromBlock: FROM_BLOCK,
         toBlock: "latest",
       });
       return logs.map((l) => ({
+        token: l.args.token!,
         trader: l.args.trader!,
         isBuy: l.args.isBuy!,
         ethAmount: l.args.ethAmount!,
@@ -160,6 +163,15 @@ export function usePair(token: Address, migrated: boolean) {
       });
       return logs[0]?.args.pair ?? null;
     },
+  });
+}
+
+/** The connected wallet's balance of each token. */
+export function useBalances(tokens: readonly Address[], owner?: Address) {
+  return useReadContracts({
+    contracts: tokens.map((address) => ({ address, abi: erc20Abi, functionName: "balanceOf", args: [owner!] }) as const),
+    allowFailure: false,
+    query: { enabled: Boolean(owner) && tokens.length > 0, refetchInterval: 10_000 },
   });
 }
 

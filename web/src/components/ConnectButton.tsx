@@ -13,7 +13,7 @@ export default function ConnectButton() {
     const injected = connectors[0];
     return (
       <button
-        className="btn"
+        className="btn btn-outline"
         disabled={isPending || !injected}
         title={error?.message}
         onClick={() => injected && connect({ connector: injected, chainId: chain.id })}
@@ -25,15 +25,15 @@ export default function ConnectButton() {
 
   if (chainId !== chain.id) {
     return (
-      <button className="btn btn-warn" onClick={() => switchChain({ chainId: chain.id })}>
+      <button className="btn btn-outline btn-warn" onClick={() => switchChain({ chainId: chain.id })}>
         Switch to {chain.name}
       </button>
     );
   }
 
   return (
-    <button className="btn" onClick={() => disconnect()} title="Disconnect">
-      {balance.data ? `${fmtEth(balance.data.value, 3)} ETH · ` : ""}
+    <button className="btn btn-outline" onClick={() => disconnect()} title="Disconnect">
+      {balance.data && <span className="wallet-balance">{fmtEth(balance.data.value, 3)} ETH · </span>}
       {shortAddr(address!)}
     </button>
   );
