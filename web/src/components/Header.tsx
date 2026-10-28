@@ -3,11 +3,11 @@ import ConnectButton from "./ConnectButton";
 import Logo from "./Logo";
 
 const TABS = [
-  { to: "/", label: "Home", end: true },
-  { to: "/create", label: "Launch" },
-  { to: "/positions", label: "My positions" },
-  { to: "/transactions", label: "Transactions" },
-  { to: "/rules", label: "Rules" },
+  { to: "/", label: "Agents", end: true },
+  { to: "/create", label: "Deploy" },
+  { to: "/positions", label: "Portfolio" },
+  { to: "/transactions", label: "Activity" },
+  { to: "/rules", label: "Protocol" },
 ];
 
 export default function Header() {
@@ -16,7 +16,9 @@ export default function Header() {
       <div className="container header-top">
         <Link to="/" className="brand">
           <Logo size={34} />
-          <span>bunyy</span>
+          <span>
+            bunyy<span className="brand-tag">AI</span>
+          </span>
         </Link>
         <ConnectButton />
       </div>

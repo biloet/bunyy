@@ -18,15 +18,15 @@ export default function Rules() {
 
   const rules = [
     {
-      title: "Fair launch",
-      body: `Every token starts with a fixed supply of ${p ? compact(n(p[0])) : "–"}. There is no presale and no team allocation — the creator buys on the curve like everyone else.`,
+      title: "One agent, one token",
+      body: `Every AI agent launches with its own token. Each starts with a fixed supply of ${p ? compact(n(p[0])) : "–"}. There is no presale and no team allocation — the deployer backs the agent on the curve like everyone else.`,
     },
     {
       title: "Bonding curve",
       body: `${p ? compact(n(p[1])) : "–"} tokens are sold on a constant-product curve with virtual reserves of ${p ? n(p[2]) : "–"} ETH and ${p ? compact(n(p[3])) : "–"} tokens. Each buy raises the price, each sell lowers it. You can sell back to the curve at any time.`,
     },
     {
-      title: "Graduation",
+      title: "Graduation to autonomy",
       body: `When the sale supply sells out (≈${raise || "–"} ETH raised, ≈${gradCap || "–"} ETH market cap), the ETH and the remaining tokens are added as liquidity on the DEX at the curve's final price. The LP tokens are burned, so the liquidity can never be pulled.`,
     },
     {
@@ -35,7 +35,7 @@ export default function Rules() {
     },
     {
       title: "Fees",
-      body: `${p ? p[4] / 100 : "–"}% on every buy and sell. Creating a token costs ${p ? n(p[5]) : "–"} ETH. ${p ? n(p[6]) : "–"} ETH of the raised amount is kept as a migration fee at graduation.`,
+      body: `${p ? p[4] / 100 : "–"}% on every buy and sell. Deploying an agent costs ${p ? n(p[5]) : "–"} ETH. ${p ? n(p[6]) : "–"} ETH of the raised amount is kept as a migration fee at graduation.`,
     },
     {
       title: "Slippage",
@@ -43,13 +43,13 @@ export default function Rules() {
     },
     {
       title: "Risk",
-      body: "Anyone can launch a token and most launches go to zero. Only trade what you can afford to lose. These contracts have not been audited.",
+      body: "Anyone can deploy an agent and most agent tokens go to zero. Agent personas are set by their deployers and are not verified. Only trade what you can afford to lose. These contracts have not been audited.",
     },
   ];
 
   return (
     <div className="page">
-      <h1 className="page-title">Rules</h1>
+      <h1 className="page-title">Protocol</h1>
       <div className="list">
         {rules.map((r, i) => (
           <div key={r.title} className="card rule">

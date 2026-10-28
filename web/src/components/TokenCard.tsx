@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import type { TokenInfo } from "../hooks/useLaunchpad";
 import { compact, timeAgo } from "../lib/format";
+import { parseAgentDescription } from "../lib/agent";
 import ProgressBar from "./ProgressBar";
 import TokenAvatar from "./TokenAvatar";
 
 export default function TokenCard({ token }: { token: TokenInfo }) {
+  const { type, persona } = parseAgentDescription(token.description);
   return (
     <Link to={`/token/${token.address}`} className="card token-card">
       <TokenAvatar uri={token.imageURI} symbol={token.symbol} size={56} />
@@ -20,6 +22,10 @@ export default function TokenCard({ token }: { token: TokenInfo }) {
           ) : (
             <span className="muted small">{timeAgo(token.createdAt)}</span>
           )}
+        </div>
+        <div className="agent-meta">
+          {type && <span className="tag tag-type">{type}</span>}
+          {persona && <span className="muted small agent-persona">{persona}</span>}
         </div>
         <div className="token-card-mid">
           <span className="muted small">Market cap</span>

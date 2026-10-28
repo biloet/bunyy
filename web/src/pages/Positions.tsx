@@ -14,8 +14,8 @@ export default function Positions() {
   if (!address) {
     return (
       <div className="page">
-        <h1 className="page-title">My positions</h1>
-        <div className="card empty">Connect your wallet to see the tokens you hold.</div>
+        <h1 className="page-title">Portfolio</h1>
+        <div className="card empty">Connect your wallet to see the agents you back.</div>
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function Positions() {
 
   return (
     <div className="page">
-      <h1 className="page-title">My positions</h1>
+      <h1 className="page-title">Portfolio</h1>
       <div className="card panel">
         <Headline
           label="Portfolio value"
@@ -42,7 +42,7 @@ export default function Positions() {
         <div className="divider" />
         <StatRow
           items={[
-            { label: "Tokens held", value: rows.length },
+            { label: "Agents backed", value: rows.length },
             { label: "Graduated", value: rows.filter((r) => r.token.migrated).length },
             { label: "Settlement", value: "ETH" },
           ]}
@@ -52,7 +52,7 @@ export default function Positions() {
       {(isLoading || balances.isLoading) && <p className="muted">Loading…</p>}
       {!isLoading && !balances.isLoading && rows.length === 0 && (
         <div className="card empty">
-          You don't hold any launchpad tokens yet. <Link to="/">Browse tokens</Link>
+          You don't back any agents yet. <Link to="/">Explore agents</Link>
         </div>
       )}
       <div className="list">

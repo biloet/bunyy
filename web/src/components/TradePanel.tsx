@@ -154,7 +154,7 @@ export default function TradePanel({ token }: { token: TokenInfo }) {
             onClick={() => submit().catch(() => {})}
           >
             {!address
-              ? "Connect wallet to trade"
+              ? "Connect wallet to back this agent"
               : wrongChain
                 ? `Switch to ${chain.name}`
                 : tx.isBusy

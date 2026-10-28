@@ -19,7 +19,7 @@ export default function Transactions() {
   return (
     <div className="page">
       <div className="section-head">
-        <h1 className="page-title">Transactions</h1>
+        <h1 className="page-title">Activity</h1>
         <div className="segmented">
           <button className={!mine ? "seg active" : "seg"} onClick={() => setMine(false)}>
             All
@@ -32,13 +32,13 @@ export default function Transactions() {
 
       {trades.error && <p className="error">Could not load transactions: {(trades.error as Error).message}</p>}
       {trades.isLoading && <p className="muted">Loading…</p>}
-      {trades.data && rows.length === 0 && <div className="card empty">No transactions yet.</div>}
+      {trades.data && rows.length === 0 && <div className="card empty">No activity yet.</div>}
       {rows.length > 0 && (
         <div className="card table-wrap">
           <table className="trades">
             <thead>
               <tr>
-                <th>Token</th>
+                <th>Agent</th>
                 <th>Type</th>
                 <th>ETH</th>
                 <th>Amount</th>

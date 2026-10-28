@@ -1,14 +1,27 @@
-/** Faceted mint gem used as the brand mark. */
+/** Brand mark: a hexagonal AI core with a neural node graph. */
 export default function Logo({ size = 36 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <polygon points="32,3 61,24 50,59 14,59 3,24" fill="#2f9e6b" />
-      <polygon points="32,3 61,24 32,32" fill="#7ef0b6" />
-      <polygon points="32,3 3,24 32,32" fill="#5fe3a0" />
-      <polygon points="3,24 14,59 32,32" fill="#3cc283" />
-      <polygon points="61,24 50,59 32,32" fill="#46cf8e" />
-      <polygon points="14,59 50,59 32,32" fill="#2a8c5f" />
-      <path d="M32 18 L35.5 28.5 L46 32 L35.5 35.5 L32 46 L28.5 35.5 L18 32 L28.5 28.5 Z" fill="#0a141c" />
+      <defs>
+        <linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#38e1ff" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </linearGradient>
+      </defs>
+      <polygon points="32,3 57,17.5 57,46.5 32,61 7,46.5 7,17.5" fill="url(#logo-g)" />
+      <polygon points="32,10 51,21 51,43 32,54 13,43 13,21" fill="#070b16" />
+      <g stroke="url(#logo-g)" strokeWidth="2.2" strokeLinecap="round">
+        <line x1="32" y1="32" x2="32" y2="19" />
+        <line x1="32" y1="32" x2="43" y2="38.5" />
+        <line x1="32" y1="32" x2="21" y2="38.5" />
+        <line x1="32" y1="19" x2="43" y2="38.5" opacity="0.45" />
+        <line x1="43" y1="38.5" x2="21" y2="38.5" opacity="0.45" />
+        <line x1="21" y1="38.5" x2="32" y2="19" opacity="0.45" />
+      </g>
+      <circle cx="32" cy="32" r="4.5" fill="#38e1ff" />
+      <circle cx="32" cy="19" r="3" fill="#8b5cf6" />
+      <circle cx="43" cy="38.5" r="3" fill="#8b5cf6" />
+      <circle cx="21" cy="38.5" r="3" fill="#8b5cf6" />
     </svg>
   );
 }

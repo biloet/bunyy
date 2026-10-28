@@ -8,7 +8,7 @@ export default function TokenAvatar({ uri, symbol, size = 64 }: { uri: string; s
   if (!src || failed) {
     return (
       <div className="avatar avatar-fallback" style={style}>
-        {symbol.slice(0, 2).toUpperCase()}
+        <span>{symbol.slice(0, 2).toUpperCase()}</span>
       </div>
     );
   }

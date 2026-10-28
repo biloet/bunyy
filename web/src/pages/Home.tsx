@@ -53,37 +53,42 @@ export default function Home() {
       <section className="hero">
         <Logo size={88} />
         <div>
-          <h1 className="hero-title">bunyy</h1>
-          <p className="hero-sub">Launch a token. Trade the curve. Graduate to the DEX.</p>
+          <div className="hero-kicker">AI agent launchpad · Robinhood Chain</div>
+          <h1 className="hero-title">
+            Deploy <span className="grad-text">AI agents</span>.
+            <br />
+            Own their economy.
+          </h1>
+          <p className="hero-sub">Every agent gets its own token on a fair bonding curve. Back the agents you believe in.</p>
         </div>
       </section>
 
       <section className="card panel">
         <Headline
-          label="Total volume"
+          label="Agent economy volume"
           pill={<Pill>{trades.isFetching ? "Syncing" : "Live"}</Pill>}
           value={fmtEth(stats.total, 4)}
           change={{ text: `+${fmtEth(stats.day, 4)}`, positive: true }}
           changeLabel="ETH last 24h"
-          caption="All launches · ETH settlement"
+          caption="All agents · ETH settlement"
         />
         <div className="divider" />
         <StatRow
           items={[
-            { label: "Tokens launched", value: tokens ? tokens.length : "–" },
+            { label: "Agents deployed", value: tokens ? tokens.length : "–" },
             { label: "Graduated", value: tokens ? graduated : "–" },
             { label: "Trade fee", value: feeBps !== undefined ? `${feeBps / 100}%` : "–" },
           ]}
         />
-        <PriceChart points={stats.points} onRefresh={() => trades.refetch()} emptyText="No trades yet — launch the first token." />
+        <PriceChart points={stats.points} onRefresh={() => trades.refetch()} emptyText="No activity yet — deploy the first agent." />
         <Link to="/create" className="btn btn-primary btn-block">
-          Launch a token
+          Deploy an agent
         </Link>
       </section>
 
       <section className="section">
         <div className="section-head">
-          <h2>Tokens</h2>
+          <h2>Agents</h2>
           <div className="segmented">
             {(
               [
@@ -98,11 +103,11 @@ export default function Home() {
             ))}
           </div>
         </div>
-        <input className="search" placeholder="Search name, ticker or address" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="search" placeholder="Search agents by name, ticker or address" value={q} onChange={(e) => setQ(e.target.value)} />
 
-        {error && <p className="error">Could not load tokens: {(error as Error).message}</p>}
-        {isLoading && <p className="muted">Loading tokens…</p>}
-        {tokens && shown.length === 0 && <p className="muted">No tokens yet. Be the first to launch one!</p>}
+        {error && <p className="error">Could not load agents: {(error as Error).message}</p>}
+        {isLoading && <p className="muted">Loading agents…</p>}
+        {tokens && shown.length === 0 && <p className="muted">No agents yet. Deploy the first one!</p>}
         <div className="grid">
           {shown.map((t) => (
             <TokenCard key={t.address} token={t} />

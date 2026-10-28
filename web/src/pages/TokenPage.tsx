@@ -8,6 +8,7 @@ import TokenAvatar from "../components/TokenAvatar";
 import TradePanel from "../components/TradePanel";
 import { launchpad, useParams, usePair, useToken, useTrades } from "../hooks/useLaunchpad";
 import { useTx } from "../hooks/useTx";
+import { parseAgentDescription } from "../lib/agent";
 import { explorerLink, fmtEth, fmtTokens, shortAddr, timeAgo } from "../lib/format";
 
 const price = (virtualEth: bigint, virtualToken: bigint) => Number(virtualEth) / Number(virtualToken);
@@ -50,6 +51,7 @@ function TokenView({ address }: { address: Address }) {
   if (error || !token) return <p className="error">Token not found on this launchpad.</p>;
 
   const recent = [...(trades.data ?? [])].reverse();
+  const agent = parseAgentDescription(token.description);
   const change = startCap ? (token.marketCapEth / startCap - 1) * 100 : 0;
   const gwei = price(token.virtualEth, token.virtualToken) * 1e9;
 
@@ -61,15 +63,19 @@ function TokenView({ address }: { address: Address }) {
             <h1>
               {token.name} <span className="muted">${token.symbol}</span>
             </h1>
+            <div className="agent-meta">
+              {agent.type && <span className="tag tag-type">{agent.type} agent</span>}
+              <span className="tag tag-good">● {token.complete ? "Autonomous" : "Bootstrapping"}</span>
+            </div>
             <div className="muted small">
-              Created by <AddrLink value={token.creator} /> {timeAgo(token.createdAt)} · Contract <AddrLink value={token.address} />
+              Deployed by <AddrLink value={token.creator} /> {timeAgo(token.createdAt)} · Contract <AddrLink value={token.address} />
             </div>
           </div>
         </div>
 
         <div className="card panel token-panel">
           <Headline
-            label="Market cap"
+            label="Agent market cap"
             pill={
               token.migrated ? (
                 <Pill>Graduated</Pill>
@@ -82,7 +88,7 @@ function TokenView({ address }: { address: Address }) {
             value={<>{token.marketCapEth.toLocaleString("en", { maximumFractionDigits: 3 })}<span className="headline-unit">ETH</span></>}
             change={{ text: `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`, positive: change >= 0 }}
             changeLabel="Since launch"
-            caption="Bonding curve · ETH settlement"
+            caption="Agent token · bonding curve · ETH settlement"
           />
           <div className="divider" />
           <StatRow
@@ -92,7 +98,7 @@ function TokenView({ address }: { address: Address }) {
               { label: "Trades", value: trades.data?.length ?? "–" },
             ]}
           />
-          <PriceChart points={points} onRefresh={() => trades.refetch()} emptyText="No trades yet — be the first to buy." />
+          <PriceChart points={points} onRefresh={() => trades.refetch()} emptyText="No trades yet — be the first to back this agent." />
         </div>
 
         <div className="card token-trades">
@@ -131,7 +137,7 @@ function TokenView({ address }: { address: Address }) {
       <aside className="token-side">
         <TradePanel token={token} />
         <div className="card">
-          <h3 className="card-title">Bonding curve progress</h3>
+          <h3 className="card-title">Bootstrap progress</h3>
           <ProgressBar value={token.progress} label={`${(token.progress * 100).toFixed(1)}%`} />
           <p className="muted small">
             {token.migrated
@@ -160,10 +166,10 @@ function TokenView({ address }: { address: Address }) {
             </p>
           )}
         </div>
-        {token.description && (
+        {agent.persona && (
           <div className="card">
-            <h3 className="card-title">About</h3>
-            <p className="small description">{token.description}</p>
+            <h3 className="card-title">Persona &amp; mission</h3>
+            <p className="small description">{agent.persona}</p>
           </div>
         )}
       </aside>
