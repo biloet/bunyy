@@ -2,12 +2,21 @@ import { useMemo, useState } from "react";
 
 export type Point = { t: number; v: number };
 
-const RANGES = [
+export type Range = { key: string; seconds: number };
+
+export const TRADE_RANGES: Range[] = [
   { key: "1H", seconds: 3600 },
   { key: "1D", seconds: 86_400 },
   { key: "1W", seconds: 604_800 },
   { key: "All", seconds: Infinity },
-] as const;
+];
+
+export const INDEX_RANGES: Range[] = [
+  { key: "1D", seconds: 86_400 },
+  { key: "1W", seconds: 604_800 },
+  { key: "1M", seconds: 2_592_000 },
+  { key: "1Y", seconds: 31_536_000 },
+];
 
 const W = 600;
 const H = 240;
@@ -32,22 +41,28 @@ export default function PriceChart({
   points,
   onRefresh,
   emptyText = "No trades yet.",
+  ranges = TRADE_RANGES,
+  pillLabel = "Last trade",
+  defaultRange,
 }: {
   points: Point[];
   onRefresh?: () => void;
   emptyText?: string;
+  ranges?: Range[];
+  pillLabel?: string;
+  defaultRange?: string;
 }) {
-  const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("All");
+  const [range, setRange] = useState(defaultRange ?? ranges[ranges.length - 1].key);
 
   const shown = useMemo(() => {
-    const seconds = RANGES.find((r) => r.key === range)!.seconds;
+    const seconds = ranges.find((r) => r.key === range)?.seconds ?? Infinity;
     if (!isFinite(seconds) || points.length === 0) return points;
     const from = Math.floor(Date.now() / 1000) - seconds;
     const inside = points.filter((p) => p.t >= from);
     const before = points.filter((p) => p.t < from).pop();
     // Carry the last value before the window in, so the line starts at the window edge.
     return before ? [{ t: from, v: before.v }, ...inside] : inside;
-  }, [points, range]);
+  }, [points, range, ranges]);
 
   const last = points[points.length - 1];
 
@@ -58,7 +73,7 @@ export default function PriceChart({
           Refresh chart
         </button>
         <div className="segmented" role="tablist">
-          {RANGES.map((r) => (
+          {ranges.map((r) => (
             <button
               key={r.key}
               type="button"
@@ -75,13 +90,13 @@ export default function PriceChart({
       {shown.length < 2 ? (
         <div className="chart-empty muted">{emptyText}</div>
       ) : (
-        <Plot points={shown} lastTime={last?.t} />
+        <Plot points={shown} lastTime={last?.t} pillLabel={pillLabel} />
       )}
     </div>
   );
 }
 
-function Plot({ points, lastTime }: { points: Point[]; lastTime?: number }) {
+function Plot({ points, lastTime, pillLabel }: { points: Point[]; lastTime?: number; pillLabel: string }) {
   const vals = points.map((p) => p.v);
   let min = Math.min(...vals);
   let max = Math.max(...vals);
@@ -117,7 +132,7 @@ function Plot({ points, lastTime }: { points: Point[]; lastTime?: number }) {
         ))}
       </div>
       <div className="plot-area">
-        {lastTime !== undefined && <div className="plot-pill">Last trade · {clock(lastTime).slice(0, 5)} UTC</div>}
+        {lastTime !== undefined && <div className="plot-pill">{pillLabel} · {clock(lastTime).slice(0, 5)} UTC</div>}
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Price chart">
           <defs>
             <linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1">

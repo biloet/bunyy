@@ -1,4 +1,4 @@
-// Deploys the Launchpad and writes its address + ABI for the web app.
+// Deploys IndexVault, creates the first index and funds reserves.
 // Configure via environment variables (see .env.example).
 const fs = require("fs");
 const path = require("path");
@@ -7,52 +7,80 @@ const { exportAbi } = require("./export-abi");
 
 const { ethers, network } = hre;
 const env = (k, d) => (process.env[k] && process.env[k].trim()) || d;
+const isLocal = network.name === "hardhat" || network.name === "localhost";
+
+// Demo components used when no real feeds are configured. Starting prices are placeholders.
+const DEMO_ASSETS = [
+  { symbol: "NVDA", price: 180 },
+  { symbol: "MSFT", price: 510 },
+  { symbol: "GOOGL", price: 250 },
+  { symbol: "AMZN", price: 230 },
+  { symbol: "META", price: 750 },
+];
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log(`Network: ${network.name} (chainId ${network.config.chainId ?? "local"})`);
-  console.log(`Deployer: ${deployer.address}`);
+  console.log(`Network: ${network.name}\nDeployer: ${deployer.address}`);
 
   const params = {
-    totalSupply: ethers.parseEther(env("TOTAL_SUPPLY", "1000000000")),
-    saleSupply: ethers.parseEther(env("SALE_SUPPLY", "800000000")),
-    virtualEth: ethers.parseEther(env("VIRTUAL_ETH", "1")),
-    virtualToken: ethers.parseEther(env("VIRTUAL_TOKEN", "1073000000")),
-    tradeFeeBps: Number(env("TRADE_FEE_BPS", "100")),
-    creationFee: ethers.parseEther(env("CREATION_FEE", "0")),
-    migrationFee: ethers.parseEther(env("MIGRATION_FEE", "0.05")),
+    feeBps: Number(env("FEE_BPS", "30")),
+    maxPayoutBps: Number(env("MAX_PAYOUT_BPS", "30000")),
+    minPrincipal: ethers.parseEther(env("MIN_PRINCIPAL", "0.001")),
+    walletPrincipalLimit: ethers.parseEther(env("WALLET_PRINCIPAL_LIMIT", "0.2")),
+    maxPriceAge: Number(env("MAX_PRICE_AGE", "86400")),
+    emergencyDelay: Number(env("EMERGENCY_DELAY", String(3 * 86400))),
   };
 
-  let dexFactory = env("DEX_FACTORY", ethers.ZeroAddress);
-  let weth = env("WETH", ethers.ZeroAddress);
-  if (network.name === "hardhat" || network.name === "localhost") {
-    // Local chain has no DEX: deploy the test doubles so graduation can be exercised.
-    weth = await (await ethers.deployContract("MockWETH")).getAddress();
-    dexFactory = await (await ethers.deployContract("MockFactory")).getAddress();
-    console.log(`Mock WETH: ${weth}\nMock DEX factory: ${dexFactory}`);
-  } else if (dexFactory === ethers.ZeroAddress || weth === ethers.ZeroAddress) {
-    console.warn("DEX_FACTORY/WETH not set: curves will complete but not migrate until setDex() is called.");
+  const vault = await ethers.deployContract("IndexVault", [params]);
+  await vault.waitForDeployment();
+  const address = await vault.getAddress();
+  const receipt = await vault.deploymentTransaction().wait();
+  console.log(`IndexVault: ${address} (block ${receipt.blockNumber})`);
+
+  // Components: real feeds from FEEDS/WEIGHTS, or mock feeds for a demo index.
+  let feeds = env("FEEDS", "").split(",").map((s) => s.trim()).filter(Boolean);
+  let weights = env("WEIGHTS", "").split(",").map((s) => Number(s.trim())).filter(Boolean);
+  const mocks = [];
+  if (feeds.length === 0) {
+    console.log("FEEDS not set: deploying mock price feeds (testnet/demo only).");
+    for (const a of DEMO_ASSETS) {
+      const feed = await ethers.deployContract("MockPriceFeed", [`${a.symbol} / USD`, 8, BigInt(a.price * 1e8)]);
+      await feed.waitForDeployment();
+      const addr = await feed.getAddress();
+      mocks.push({ symbol: a.symbol, address: addr });
+      feeds.push(addr);
+      console.log(`  ${a.symbol} feed: ${addr}`);
+    }
+    weights = DEMO_ASSETS.map(() => 10_000 / DEMO_ASSETS.length);
+  }
+  if (weights.length !== feeds.length) throw new Error("WEIGHTS must have one entry per feed");
+
+  await (
+    await vault.createIndex(
+      env("INDEX_NAME", "dibVarse AI Index"),
+      env("INDEX_SYMBOL", "AIX"),
+      env("INDEX_DESCRIPTION", "Five AI leaders. One index."),
+      feeds,
+      weights,
+    )
+  ).wait();
+  console.log("Index 0 created.");
+
+  const reserve = ethers.parseEther(env("RESERVE_ETH", isLocal ? "10" : "0.1"));
+  if (reserve > 0n) {
+    await (await vault.fundReserves({ value: reserve })).wait();
+    console.log(`Reserves funded: ${ethers.formatEther(reserve)} ETH`);
   }
 
-  const launchpad = await ethers.deployContract("Launchpad", [
-    params,
-    env("FEE_RECIPIENT", deployer.address),
-    dexFactory,
-    weth,
-  ]);
-  await launchpad.waitForDeployment();
-  const address = await launchpad.getAddress();
-  const receipt = await launchpad.deploymentTransaction().wait();
-  console.log(`Launchpad: ${address} (block ${receipt.blockNumber})`);
-
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
-  const deployment = { network: network.name, chainId, address, blockNumber: receipt.blockNumber, dexFactory, weth };
+  const deployment = { network: network.name, chainId, address, blockNumber: receipt.blockNumber, mockFeeds: mocks };
   const dir = path.join(__dirname, "..", "deployments");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${network.name}.json`), JSON.stringify(deployment, null, 2) + "\n");
 
   exportAbi();
-  console.log(`\nSet these in web/.env:\nVITE_LAUNCHPAD_ADDRESS=${address}\nVITE_LAUNCHPAD_FROM_BLOCK=${receipt.blockNumber}`);
+  console.log(`\nSet these in web/.env (or Vercel):\nVITE_VAULT_ADDRESS=${address}\nVITE_VAULT_FROM_BLOCK=${receipt.blockNumber}`);
+  if (mocks.length) console.log(`\nKeep mock prices fresh with: npx hardhat run scripts/push-prices.js --network ${network.name}`);
 }
 
 main().catch((e) => {

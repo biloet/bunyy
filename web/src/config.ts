@@ -42,11 +42,11 @@ export const chain = defineChain({
   testnet: presets.testnet,
 });
 
-export const LAUNCHPAD_ADDRESS = (env.VITE_LAUNCHPAD_ADDRESS || "") as Address | "";
-export const FROM_BLOCK = BigInt(env.VITE_LAUNCHPAD_FROM_BLOCK || "0");
+export const VAULT_ADDRESS = (env.VITE_VAULT_ADDRESS || "") as Address | "";
+export const FROM_BLOCK = BigInt(env.VITE_VAULT_FROM_BLOCK || "0");
 export const missingEnv = [
   !rpcUrl && "VITE_RPC_URL",
-  !LAUNCHPAD_ADDRESS && "VITE_LAUNCHPAD_ADDRESS",
+  !VAULT_ADDRESS && "VITE_VAULT_ADDRESS",
 ].filter(Boolean) as string[];
 export const isConfigured = missingEnv.length === 0;
 

@@ -2,13 +2,15 @@
   "name": "dibvarse-contracts",
   "version": "0.1.0",
   "private": true,
-  "description": "Bonding-curve token launchpad contracts for Robinhood Chain",
+  "description": "ETH-settled synthetic index vault for Robinhood Chain",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:testnet": "hardhat run scripts/deploy.js --network robinhoodTestnet",
     "deploy:mainnet": "hardhat run scripts/deploy.js --network robinhood",
+    "prices:local": "hardhat run scripts/push-prices.js --network localhost",
+    "prices:testnet": "hardhat run scripts/push-prices.js --network robinhoodTestnet",
     "export-abi": "node scripts/export-abi.js"
   },
   "devDependencies": {

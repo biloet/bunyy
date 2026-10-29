@@ -1,25 +1,26 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { useTokens, useTrades } from "../hooks/useLaunchpad";
-import { explorerLink, fmtEth, fmtTokens, shortAddr, timeAgo } from "../lib/format";
+import { useActivity, useIndexes } from "../hooks/useVault";
+import { explorerLink, fmtEth, fmtLevel, shortAddr, timeAgo } from "../lib/format";
+
+const KIND_LABEL = { open: "Open", close: "Close", refund: "Refund" } as const;
 
 export default function Transactions() {
   const { address } = useAccount();
-  const trades = useTrades();
-  const { tokens } = useTokens();
+  const activity = useActivity();
+  const indexes = useIndexes();
   const [mine, setMine] = useState(false);
 
-  const symbols = useMemo(() => new Map((tokens ?? []).map((t) => [t.address.toLowerCase(), t.symbol])), [tokens]);
   const rows = useMemo(() => {
-    const list = [...(trades.data ?? [])].reverse();
-    return mine && address ? list.filter((t) => t.trader.toLowerCase() === address.toLowerCase()) : list;
-  }, [trades.data, mine, address]);
+    const list = activity.data ?? [];
+    return mine && address ? list.filter((a) => a.owner.toLowerCase() === address.toLowerCase()) : list;
+  }, [activity.data, mine, address]);
+  const symbol = (id?: number) => (id === undefined ? "–" : indexes.data?.find((i) => i.id === id)?.symbol ?? `#${id}`);
 
   return (
     <div className="page">
       <div className="section-head">
-        <h1 className="page-title">Activity</h1>
+        <h1 className="page-title">Transactions</h1>
         <div className="segmented">
           <button className={!mine ? "seg active" : "seg"} onClick={() => setMine(false)}>
             All
@@ -30,41 +31,41 @@ export default function Transactions() {
         </div>
       </div>
 
-      {trades.error && <p className="error">Could not load transactions: {(trades.error as Error).message}</p>}
-      {trades.isLoading && <p className="muted">Loading…</p>}
-      {trades.data && rows.length === 0 && <div className="card empty">No activity yet.</div>}
+      {activity.error && <p className="error">Could not load transactions: {(activity.error as Error).message}</p>}
+      {activity.isLoading && <p className="muted">Loading…</p>}
+      {activity.data && rows.length === 0 && <div className="card empty">No transactions yet.</div>}
       {rows.length > 0 && (
         <div className="card table-wrap">
           <table className="trades">
             <thead>
               <tr>
-                <th>Agent</th>
                 <th>Type</th>
-                <th>ETH</th>
+                <th>Index</th>
                 <th>Amount</th>
+                <th>Level</th>
                 <th>Account</th>
                 <th>When</th>
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 200).map((t) => {
-                const tx = explorerLink("tx", t.txHash);
+              {rows.slice(0, 200).map((a) => {
+                const tx = explorerLink("tx", a.txHash);
                 return (
-                  <tr key={t.txHash + t.token + t.tokenAmount}>
-                    <td>
-                      <Link to={`/token/${t.token}`}>{symbols.get(t.token.toLowerCase()) ?? shortAddr(t.token)}</Link>
-                    </td>
-                    <td className={t.isBuy ? "buy" : "sell"}>{t.isBuy ? "Buy" : "Sell"}</td>
-                    <td className="mono">{fmtEth(t.ethAmount)}</td>
-                    <td className="mono">{fmtTokens(t.tokenAmount)}</td>
-                    <td>{shortAddr(t.trader)}</td>
+                  <tr key={`${a.txHash}-${a.kind}-${a.positionId}`}>
+                    <td className={a.kind === "open" ? "buy" : a.kind === "close" ? "sell" : ""}>{KIND_LABEL[a.kind]}</td>
+                    <td>{symbol(a.indexId)}</td>
+                    <td>{fmtEth(a.amount, 5)} ETH</td>
+                    <td>{a.level ? fmtLevel(Number(a.level) / 1e18) : "–"}</td>
+                    <td>{shortAddr(a.owner)}</td>
                     <td>
                       {tx ? (
                         <a href={tx} target="_blank" rel="noreferrer">
-                          {timeAgo(t.timestamp)}
+                          {a.timestamp ? timeAgo(a.timestamp) : "tx"}
                         </a>
+                      ) : a.timestamp ? (
+                        timeAgo(a.timestamp)
                       ) : (
-                        timeAgo(t.timestamp)
+                        "–"
                       )}
                     </td>
                   </tr>

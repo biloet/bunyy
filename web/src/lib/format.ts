@@ -47,3 +47,21 @@ export function safeImage(uri: string) {
   if (/^https?:\/\//i.test(u)) return u;
   return "";
 }
+
+/** Index level with 2 decimals and thousands separators, e.g. 1,195.61. */
+export function fmtLevel(level: number) {
+  return level.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function fmtPct(pct: number) {
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+}
+
+export function fmtUsd(n: number) {
+  if (!isFinite(n)) return "–";
+  return n.toLocaleString("en", { style: "currency", currency: "USD", maximumFractionDigits: n < 1 ? 4 : 2 });
+}
+
+export function clockUtc(ts: number) {
+  return `${new Date(ts * 1000).toISOString().slice(11, 16)} UTC`;
+}

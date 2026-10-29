@@ -1,77 +1,90 @@
 import { Link } from "react-router-dom";
-import { formatUnits } from "viem";
 import { useAccount } from "wagmi";
-import TokenAvatar from "../components/TokenAvatar";
+import PositionRow from "../components/PositionRow";
 import { Headline, StatRow } from "../components/StatCard";
-import { useBalances, useTokens } from "../hooks/useLaunchpad";
-import { fmtTokens } from "../lib/format";
+import { useActivity, useIndexes, usePositions, useVaultState } from "../hooks/useVault";
+import { fmtEth, fmtPct } from "../lib/format";
 
 export default function Positions() {
   const { address } = useAccount();
-  const { tokens, isLoading } = useTokens();
-  const balances = useBalances((tokens ?? []).map((t) => t.address), address);
+  const indexes = useIndexes();
+  const vaultState = useVaultState();
+  const positions = usePositions(address);
+  const activity = useActivity();
 
   if (!address) {
     return (
       <div className="page">
-        <h1 className="page-title">Portfolio</h1>
-        <div className="card empty">Connect your wallet to see the agents you back.</div>
+        <h1 className="page-title">My positions</h1>
+        <div className="card empty">Connect your wallet to see your positions.</div>
       </div>
     );
   }
 
-  const rows = (tokens ?? [])
-    .map((t, i) => {
-      const balance = (balances.data?.[i] as bigint | undefined) ?? 0n;
-      const priceEth = Number(t.virtualEth) / Number(t.virtualToken);
-      return { token: t, balance, valueEth: Number(formatUnits(balance, 18)) * priceEth };
-    })
-    .filter((r) => r.balance > 0n)
-    .sort((a, b) => b.valueEth - a.valueEth);
-  const total = rows.reduce((s, r) => s + r.valueEth, 0);
+  const list = positions.data ?? [];
+  const open = list.filter((p) => p.open);
+  const closed = list.filter((p) => !p.open);
+  const principal = open.reduce((s, p) => s + p.principal, 0n);
+  const value = open.reduce((s, p) => s + p.quote, 0n);
+  const pnl = principal > 0n ? (Number(value) / Number(principal) - 1) * 100 : 0;
 
   return (
     <div className="page">
-      <h1 className="page-title">Portfolio</h1>
+      <h1 className="page-title">My positions</h1>
       <div className="card panel">
         <Headline
-          label="Portfolio value"
-          value={<>{total.toLocaleString("en", { maximumFractionDigits: 5 })}<span className="headline-unit">ETH</span></>}
-          caption="At current curve prices · before fees"
+          label="Position value"
+          value={
+            <>
+              {fmtEth(value, 5)}
+              <span className="headline-unit">ETH</span>
+            </>
+          }
+          change={principal > 0n ? { text: fmtPct(pnl), positive: pnl >= 0 } : undefined}
+          changeLabel="Unrealized, after fee"
+          caption="If closed now · ETH settlement"
         />
         <div className="divider" />
         <StatRow
           items={[
-            { label: "Agents backed", value: rows.length },
-            { label: "Graduated", value: rows.filter((r) => r.token.migrated).length },
-            { label: "Settlement", value: "ETH" },
+            { label: "Open positions", value: open.length },
+            { label: "Principal", value: fmtEth(principal, 5), unit: "ETH" },
+            { label: "Closed", value: closed.length },
           ]}
         />
       </div>
 
-      {(isLoading || balances.isLoading) && <p className="muted">Loading…</p>}
-      {!isLoading && !balances.isLoading && rows.length === 0 && (
+      {positions.isLoading && <p className="muted">Loading…</p>}
+      {positions.data && list.length === 0 && (
         <div className="card empty">
-          You don't back any agents yet. <Link to="/">Explore agents</Link>
+          You have no positions yet. <Link to="/trade">Open one</Link>
         </div>
       )}
-      <div className="list">
-        {rows.map(({ token, balance, valueEth }) => (
-          <Link key={token.address} to={`/token/${token.address}`} className="card list-row">
-            <TokenAvatar uri={token.imageURI} symbol={token.symbol} size={44} />
-            <div className="list-main">
-              <strong>{token.name}</strong>
-              <span className="muted small">
-                {fmtTokens(balance)} {token.symbol}
-              </span>
-            </div>
-            <div className="list-end">
-              <span className="mono">{valueEth.toLocaleString("en", { maximumFractionDigits: 5 })} ETH</span>
-              <span className="muted small">{token.migrated ? "On DEX" : `${(token.progress * 100).toFixed(1)}% bonded`}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {open.length > 0 && (
+        <section className="section">
+          <h2>Open</h2>
+          <div className="list">
+            {open.map((p) => (
+              <PositionRow key={p.id.toString()} position={p} index={indexes.data?.find((i) => i.id === p.indexId)} vaultState={vaultState.data} />
+            ))}
+          </div>
+        </section>
+      )}
+      {closed.length > 0 && (
+        <section className="section">
+          <h2>Closed</h2>
+          <div className="list">
+            {closed.map((p) => (
+              <PositionRow
+                key={p.id.toString()}
+                position={p}
+                index={indexes.data?.find((i) => i.id === p.indexId)}
+                settlement={activity.data?.find((a) => a.kind !== "open" && a.positionId === p.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

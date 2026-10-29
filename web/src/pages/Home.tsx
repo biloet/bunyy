@@ -1,119 +1,36 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { formatEther } from "viem";
+import Composition from "../components/Composition";
+import IndexCard from "../components/IndexCard";
+import IndexPicker from "../components/IndexPicker";
 import Logo from "../components/Logo";
-import PriceChart, { type Point } from "../components/PriceChart";
-import { Headline, Pill, StatRow } from "../components/StatCard";
-import TokenCard from "../components/TokenCard";
-import { useParams, useTokens, useTrades } from "../hooks/useLaunchpad";
-import { fmtEth } from "../lib/format";
-
-type Sort = "new" | "mcap" | "graduating";
+import { useSelectedIndex } from "../hooks/useSelectedIndex";
+import { useIndexes, useVaultState } from "../hooks/useVault";
 
 export default function Home() {
-  const { tokens, isLoading, error } = useTokens();
-  const trades = useTrades();
-  const params = useParams();
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<Sort>("new");
-
-  const stats = useMemo(() => {
-    const list = trades.data ?? [];
-    const dayAgo = Math.floor(Date.now() / 1000) - 86_400;
-    let total = 0n;
-    let day = 0n;
-    const points: Point[] = [];
-    for (const t of list) {
-      total += t.ethAmount;
-      if (Number(t.timestamp) >= dayAgo) day += t.ethAmount;
-      points.push({ t: Number(t.timestamp), v: Number(formatEther(total)) });
-    }
-    return { total, day, points };
-  }, [trades.data]);
-
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    let list = (tokens ?? []).filter(
-      (t) =>
-        !needle ||
-        t.name.toLowerCase().includes(needle) ||
-        t.symbol.toLowerCase().includes(needle) ||
-        t.address.toLowerCase() === needle,
-    );
-    if (sort === "mcap") list = [...list].sort((a, b) => b.marketCapEth - a.marketCapEth);
-    if (sort === "graduating") list = list.filter((t) => !t.complete).sort((a, b) => b.progress - a.progress);
-    return list;
-  }, [tokens, q, sort]);
-
-  const graduated = (tokens ?? []).filter((t) => t.migrated).length;
-  const feeBps = params.data?.[4];
+  const indexes = useIndexes();
+  const vaultState = useVaultState();
+  const { selected, select } = useSelectedIndex(indexes.data);
 
   return (
     <>
       <section className="hero">
         <Logo size={88} />
         <div>
-          <div className="hero-kicker">AI agent launchpad · Robinhood Chain</div>
-          <h1 className="hero-title">
-            Deploy <span className="grad-text">AI agents</span>.
-            <br />
-            Own their economy.
-          </h1>
-          <p className="hero-sub">Every agent gets its own token on a fair bonding curve. Back the agents you believe in.</p>
+          <h1 className="hero-title">{selected?.name ?? "dibVarse"}</h1>
+          <p className="hero-sub">{selected?.description || "AI leaders. One index."}</p>
         </div>
       </section>
 
-      <section className="card panel">
-        <Headline
-          label="Agent economy volume"
-          pill={<Pill>{trades.isFetching ? "Syncing" : "Live"}</Pill>}
-          value={fmtEth(stats.total, 4)}
-          change={{ text: `+${fmtEth(stats.day, 4)}`, positive: true }}
-          changeLabel="ETH last 24h"
-          caption="All agents · ETH settlement"
-        />
-        <div className="divider" />
-        <StatRow
-          items={[
-            { label: "Agents deployed", value: tokens ? tokens.length : "–" },
-            { label: "Graduated", value: tokens ? graduated : "–" },
-            { label: "Trade fee", value: feeBps !== undefined ? `${feeBps / 100}%` : "–" },
-          ]}
-        />
-        <PriceChart points={stats.points} onRefresh={() => trades.refetch()} emptyText="No activity yet — deploy the first agent." />
-        <Link to="/create" className="btn btn-primary btn-block">
-          Deploy an agent
-        </Link>
-      </section>
+      {indexes.data && <IndexPicker indexes={indexes.data} selected={selected} onSelect={select} />}
+      {indexes.error && <p className="error">Could not load the index: {(indexes.error as Error).message}</p>}
+      {indexes.isLoading && <div className="card panel muted">Loading index…</div>}
+      {indexes.data?.length === 0 && <div className="card empty">No index has been created yet.</div>}
 
-      <section className="section">
-        <div className="section-head">
-          <h2>Agents</h2>
-          <div className="segmented">
-            {(
-              [
-                ["new", "New"],
-                ["mcap", "Market cap"],
-                ["graduating", "Bonding"],
-              ] as const
-            ).map(([key, label]) => (
-              <button key={key} className={sort === key ? "seg active" : "seg"} onClick={() => setSort(key)}>
-                {label}
-              </button>
-            ))}
-          </div>
+      {selected && (
+        <div className="stack">
+          <IndexCard index={selected} vaultState={vaultState.data} />
+          <Composition index={selected} />
         </div>
-        <input className="search" placeholder="Search agents by name, ticker or address" value={q} onChange={(e) => setQ(e.target.value)} />
-
-        {error && <p className="error">Could not load agents: {(error as Error).message}</p>}
-        {isLoading && <p className="muted">Loading agents…</p>}
-        {tokens && shown.length === 0 && <p className="muted">No agents yet. Deploy the first one!</p>}
-        <div className="grid">
-          {shown.map((t) => (
-            <TokenCard key={t.address} token={t} />
-          ))}
-        </div>
-      </section>
+      )}
     </>
   );
 }

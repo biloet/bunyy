@@ -1,8 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
 import Home from "./pages/Home";
-import Create from "./pages/Create";
-import TokenPage from "./pages/TokenPage";
+import Trade from "./pages/Trade";
 import Positions from "./pages/Positions";
 import Transactions from "./pages/Transactions";
 import Rules from "./pages/Rules";
@@ -19,7 +18,7 @@ export default function App() {
             <div>
               <strong>Launching soon on {chain.name}</strong>
               <p className="muted small">
-                The dibVarse launchpad is being deployed. Deploying agents and trading open as soon as it goes live.
+                The dibVarse index vault is being deployed. Trading opens as soon as it goes live.
               </p>
             </div>
           </div>
@@ -39,8 +38,7 @@ export default function App() {
         )}
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/create" element={<Create />} />
-          <Route path="/token/:address" element={<TokenPage />} />
+          <Route path="/trade" element={<Trade />} />
           <Route path="/positions" element={<Positions />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/rules" element={<Rules />} />

@@ -1,55 +1,54 @@
-import { formatEther } from "viem";
-import { useParams } from "../hooks/useLaunchpad";
-import { compact } from "../lib/format";
+import { useVaultState } from "../hooks/useVault";
+import { fmtEth } from "../lib/format";
+
+function duration(seconds: number) {
+  if (seconds % 86400 === 0) return `${seconds / 86400} day${seconds === 86400 ? "" : "s"}`;
+  if (seconds % 3600 === 0) return `${seconds / 3600} hour${seconds === 3600 ? "" : "s"}`;
+  return `${Math.round(seconds / 60)} minutes`;
+}
 
 export default function Rules() {
-  const { data: p } = useParams();
-  const n = (v: bigint) => Number(formatEther(v));
-
-  let raise = "";
-  let gradCap = "";
-  if (p) {
-    const [totalSupply, saleSupply, virtualEth, virtualToken] = p.map((x) => BigInt(x));
-    const k = n(virtualEth) * n(virtualToken);
-    const endEth = k / (n(virtualToken) - n(saleSupply));
-    raise = (endEth - n(virtualEth)).toFixed(3);
-    gradCap = ((endEth / (n(virtualToken) - n(saleSupply))) * n(totalSupply)).toFixed(2);
-  }
+  const { data: v } = useVaultState();
+  const x = v ? `${v.maxPayoutBps / 10_000}×` : "–";
 
   const rules = [
     {
-      title: "One agent, one token",
-      body: `Every AI agent launches with its own token. Each starts with a fixed supply of ${p ? compact(n(p[0])) : "–"}. There is no presale and no team allocation — the deployer backs the agent on the curve like everyone else.`,
+      title: "What the index tracks",
+      body: "Each index is a weighted basket of assets priced by oracles. It launched at 1,000 and moves with the weighted return of its components since launch: if every asset rises 10%, the index reads 1,100.",
     },
     {
-      title: "Bonding curve",
-      body: `${p ? compact(n(p[1])) : "–"} tokens are sold on a constant-product curve with virtual reserves of ${p ? n(p[2]) : "–"} ETH and ${p ? compact(n(p[3])) : "–"} tokens. Each buy raises the price, each sell lowers it. You can sell back to the curve at any time.`,
+      title: "ETH settlement",
+      body: "You deposit ETH and get ETH back. Your position's value is principal × exit level ÷ entry level, so it follows the index's percentage move, measured in ETH.",
     },
     {
-      title: "Graduation to autonomy",
-      body: `When the sale supply sells out (≈${raise || "–"} ETH raised, ≈${gradCap || "–"} ETH market cap), the ETH and the remaining tokens are added as liquidity on the DEX at the curve's final price. The LP tokens are burned, so the liquidity can never be pulled.`,
+      title: "Payout cap",
+      body: `A position pays at most ${x} its principal. This keeps the vault able to settle every open position at once.`,
     },
     {
-      title: "Transfers",
-      body: "Until a token graduates it can only be bought from or sold to the curve. Wallet-to-wallet transfers unlock at graduation, so nobody can seed the DEX pool at a bad price first.",
+      title: "Reserves",
+      body: `The vault's ETH reserves are the counterparty: they pay gains and receive losses and fees. Every open position locks enough reserves to cover its maximum payout. "Effective reserves" is what remains for new positions (now ${v ? fmtEth(v.effectiveReserves, 5) : "–"} ETH).`,
+    },
+    {
+      title: "Wallet principal limit",
+      body: `Each wallet can have up to ${v ? fmtEth(v.walletPrincipalLimit, 4) : "–"} ETH of open principal per index. The minimum position is ${v ? fmtEth(v.minPrincipal, 4) : "–"} ETH.`,
     },
     {
       title: "Fees",
-      body: `${p ? p[4] / 100 : "–"}% on every buy and sell. Deploying an agent costs ${p ? n(p[5]) : "–"} ETH. ${p ? n(p[6]) : "–"} ETH of the raised amount is kept as a migration fee at graduation.`,
+      body: `${v ? v.feeBps / 100 : "–"}% when opening (on principal) and ${v ? v.feeBps / 100 : "–"}% when closing (on payout). Fees go to the reserves.`,
     },
     {
-      title: "Slippage",
-      body: "Every trade sets a minimum amount out. If the price moves past your slippage limit before your transaction is mined, it reverts and you keep your funds.",
+      title: "Valid price",
+      body: `Opening and closing need every component price to be fresh (updated within ${v ? duration(v.maxPriceAge) : "–"}). When any price is stale the index shows "Stale price" and trading pauses. If prices stay stale for ${v ? duration(v.emergencyDelay) : "–"}, you can take your principal back with an emergency refund.`,
     },
     {
       title: "Risk",
-      body: "Anyone can deploy an agent and most agent tokens go to zero. Agent personas are set by their deployers and are not verified. Only trade what you can afford to lose. These contracts have not been audited.",
+      body: "You can lose part or all of your deposit if the index falls. Testnet indexes use simulated prices. Tokenized stocks are regulated securities in many countries — check that you are allowed to use this product. The contracts have not been audited.",
     },
   ];
 
   return (
     <div className="page">
-      <h1 className="page-title">Protocol</h1>
+      <h1 className="page-title">Rules</h1>
       <div className="list">
         {rules.map((r, i) => (
           <div key={r.title} className="card rule">

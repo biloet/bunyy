@@ -1,29 +1,30 @@
-# dibVarse — AI agent launchpad on Robinhood Chain
+# dibVarse Index — AI stocks, one index, on Robinhood Chain
 
-A pump.fun-style launchpad for [Robinhood Chain](https://docs.robinhood.com/chain/connecting) (an EVM Arbitrum Orbit L2, gas paid in ETH).
+dibVarse lets anyone take ETH-settled exposure to a basket of assets (e.g. tokenized AI stocks) on [Robinhood Chain](https://docs.robinhood.com/chain/connecting), an EVM Arbitrum Orbit L2 with ETH gas.
 
-- **Anyone can launch a token** with a name, ticker, image and description, and can do an optional first buy in the same transaction.
-- **Fair launch on a bonding curve.** Every token trades against ETH on a constant-product curve with virtual reserves. There is no presale and no team allocation.
-- **Graduation to a DEX.** When the curve's sale supply sells out, the raised ETH plus the reserved tokens are added as liquidity to a Uniswap V2-compatible DEX at the curve's final price. The LP tokens are burned, so the liquidity is locked forever.
-- **Anti-sniping of the DEX pool.** Wallet-to-wallet transfers stay locked until graduation, so nobody can seed the DEX pair at a bad price first.
+- **One index, many assets.** Each index is a weighted basket priced by Chainlink-compatible oracles. It launches at **1,000** and moves with the weighted return of its components.
+- **ETH in, ETH out.** Deposit ETH to open a position; on close you get `principal × exit level ÷ entry level`, capped at a max payout (default 3×), minus a small fee.
+- **Always solvent.** The vault's ETH reserves are the counterparty. Every open position locks enough reserves for its maximum payout. *Effective reserves* is what is left to back new positions.
+- **Valid price guard.** Trading only happens when every component price is fresh. If prices stay stale too long, users can take their principal back with an emergency refund.
+- **Per-wallet principal limit** to keep exposure small while the product is young.
 
 ```
-contracts/   Solidity + Hardhat (Launchpad, LaunchToken, tests, deploy script)
-web/         Vite + React + wagmi/viem frontend
+contracts/   Solidity + Hardhat (IndexVault, MockPriceFeed, tests, deploy + price keeper scripts)
+web/         Vite + React + wagmi/viem frontend (Home, Trade, My positions, Transactions, Rules)
 ```
 
-## How the curve works (default parameters)
+## Default parameters
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| Total supply | 1,000,000,000 | minted per token |
-| Sale supply | 800,000,000 | sold on the curve |
-| Virtual ETH / virtual tokens | 1 ETH / 1,073,000,000 | starting reserves, which set the starting price |
-| Trade fee | 1% | on every buy/sell, sent to the fee recipient |
-| Creation fee | 0 ETH | |
-| Migration fee | 0.05 ETH | taken from the raised ETH at graduation |
+| Fee | 0.3% | on open (principal) and on close (payout), paid to reserves |
+| Max payout | 3× principal | caps gains so reserves can always settle |
+| Wallet principal limit | 0.2 ETH | per wallet, per index |
+| Minimum position | 0.001 ETH | |
+| Max price age | 1 day | older answers make the price "stale" and pause trading |
+| Emergency delay | 3 days | stale time after which principal can be refunded |
 
-With these defaults a curve raises **≈2.93 ETH** before graduating, at a market cap of **≈14.4 ETH**. All values can be changed at deploy time (`contracts/.env`) or later with `setParams`. Changes only affect new launches. The owner can never touch ETH held by a curve.
+Change them at deploy time (`contracts/.env`) or later with `setParams`. The max payout can't change while positions are open.
 
 ## Run locally
 
@@ -35,49 +36,47 @@ cd contracts && npm install && npm test
 cd contracts && npx hardhat node
 ```
 
-In a second terminal (local deploys also deploy a mock WETH + DEX so graduation works):
+In a second terminal: deploy the vault, 5 mock price feeds (NVDA, MSFT, GOOGL, AMZN, META) and the first index, then move prices a few times:
 
 ```bash
 cd contracts && npm run deploy:local
 ```
 
 ```bash
-cd web && npm install && cp .env.example .env
+cd contracts && npm run prices:local
 ```
 
-Set `VITE_CHAIN=local` and the `VITE_LAUNCHPAD_ADDRESS` printed by the deploy, then:
+Then start the web app with `VITE_CHAIN=local` and the printed `VITE_VAULT_ADDRESS` in `web/.env`:
 
 ```bash
-cd web && npm run dev
+cd web && npm install && npm run dev
 ```
-
-Import a Hardhat test account into MetaMask and add the network `http://127.0.0.1:8545` (chain ID 31337).
 
 ## Deploy to Robinhood Chain testnet
 
-1. Get testnet ETH from the faucet (`faucet.testnet.chain.robinhood.com`) or bridge from Sepolia.
-2. Get an RPC URL, e.g. Alchemy: `https://robinhood-testnet.g.alchemy.com/v2/<API_KEY>`.
-3. Copy `contracts/.env.example` to `contracts/.env` and fill in `PRIVATE_KEY` and `ROBINHOOD_TESTNET_RPC_URL`. To have curves graduate automatically, also fill in `DEX_FACTORY` and `WETH` (a Uniswap V2-compatible factory and the wrapped ETH on the chain).
-4. Deploy:
+1. Get testnet ETH from `faucet.testnet.chain.robinhood.com`.
+2. Copy `contracts/.env.example` to `contracts/.env` and set `PRIVATE_KEY`. The testnet RPC defaults to the public `https://rpc.testnet.chain.robinhood.com`. `RESERVE_ETH` (default 0.1) is sent to the vault as reserves.
+3. Deploy:
    ```bash
    cd contracts && npm run deploy:testnet
    ```
-5. Copy `web/.env.example` to `web/.env`, set `VITE_CHAIN=testnet`, `VITE_RPC_URL`, and the printed `VITE_LAUNCHPAD_ADDRESS` / `VITE_LAUNCHPAD_FROM_BLOCK`, then build:
+   Without `FEEDS`, this deploys mock price feeds. Keep them fresh (otherwise the index shows "Stale price" after `MAX_PRICE_AGE`), e.g. every 5 minutes:
    ```bash
-   cd web && npm run build
+   cd contracts && LOOP_SECONDS=300 npm run prices:testnet
    ```
-   `web/dist` is a static site and can be hosted anywhere (Vercel, Netlify, Cloudflare Pages…).
+4. Set the web app's variables (in `web/.env`, or Vercel → Settings → Environment Variables): `VITE_CHAIN=testnet`, `VITE_VAULT_ADDRESS`, `VITE_VAULT_FROM_BLOCK`. Then redeploy.
+
+### Real price feeds
+
+For production, set `FEEDS` (comma-separated Chainlink-compatible aggregator addresses) and `WEIGHTS` (basis points summing to 10000) before deploying, and tune `MAX_PRICE_AGE` to the feeds' heartbeat. Stock feeds don't update outside market hours, so trading pauses then by design.
 
 ### Hosting on Vercel
 
-Set **Root Directory** to `web`. Then add these under **Settings → Environment Variables**: `VITE_CHAIN`, `VITE_LAUNCHPAD_ADDRESS` and `VITE_LAUNCHPAD_FROM_BLOCK`. `VITE_RPC_URL` and `VITE_EXPLORER_URL` are optional. On testnet the RPC defaults to the official public endpoint `https://rpc.testnet.chain.robinhood.com`, which is rate-limited. Until the launchpad address is set, visitors see a "Launching soon" banner. Vite bakes these into the build, so **redeploy after changing them**. `web/vercel.json` makes page refreshes on routes like `/token/0x…` work. The RPC URL ends up in the public bundle. If it carries an API key, restrict that key to your domain in the provider's dashboard.
+Set **Root Directory** to `web`. `web/vercel.json` makes page refreshes on routes like `/trade` work. Vite bakes environment variables into the build, so redeploy after changing them. Until `VITE_VAULT_ADDRESS` is set, visitors see a "Launching soon" banner.
 
-If no DEX is configured, a curve still completes when it sells out but waits. Once the owner calls `setDex(factory, weth)`, anyone can press **Migrate liquidity to DEX** on the token page (or call `migrate(token)`).
+## Risks and notes
 
-Mainnet (chain ID 4663) works the same way with `npm run deploy:mainnet`. Get the contracts audited before putting real funds in them.
-
-## Notes
-
-- The compiler is the `solc` npm package (solcjs 0.8.24), so `hardhat compile` never needs to download a compiler.
-- The frontend reads trades from `Trade` event logs starting at `VITE_LAUNCHPAD_FROM_BLOCK`. Some RPC providers cap `eth_getLogs` ranges; for a busy launchpad, add an indexer (e.g. a subgraph or Ponder).
-- Token images are URLs (`https://` or `ipfs://`) stored on-chain; uploading to IPFS is left to the creator.
+- **Oracle latency.** Users trade at the latest oracle price. Fees, the wallet limit and the payout cap limit what someone can extract by trading just before a known price update. Use fast, reliable feeds on mainnet.
+- **Reserves can lose money** when the index rises. Size `RESERVE_ETH` and the wallet limit together.
+- **Regulation.** Tokenized stocks are securities in many countries. Get legal advice before offering this with real funds.
+- The contracts have not been audited.
