@@ -19,7 +19,7 @@ export default function App() {
             <div>
               <strong>Launching soon on {chain.name}</strong>
               <p className="muted small">
-                The bunyy launchpad is being deployed. Deploying agents and trading open as soon as it goes live.
+                The dibVarse launchpad is being deployed. Deploying agents and trading open as soon as it goes live.
               </p>
             </div>
           </div>

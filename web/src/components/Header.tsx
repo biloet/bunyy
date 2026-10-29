@@ -17,7 +17,7 @@ export default function Header() {
         <Link to="/" className="brand">
           <Logo size={34} />
           <span>
-            bunyy<span className="brand-tag">AI</span>
+            dibVarse<span className="brand-tag">AI</span>
           </span>
         </Link>
         <ConnectButton />

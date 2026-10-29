@@ -1,4 +1,4 @@
-# bunyy 🐰 — token launchpad on Robinhood Chain
+# dibVarse — AI agent launchpad on Robinhood Chain
 
 A pump.fun-style launchpad for [Robinhood Chain](https://docs.robinhood.com/chain/connecting) (an EVM Arbitrum Orbit L2, gas paid in ETH).
 
